@@ -36,6 +36,10 @@ colour_defined = False
 colours = ['green', 'yellow', 'purple']
 current_colour = None
 
+check = {   'green': lambda x: is_green(x), 
+            'yellow': lambda x: is_yellow(x), 
+            'purple': lambda x: is_purple(x)  }
+
 def go_to_x(x1, action = None):
     global x, y, z, start_stream
 
@@ -266,7 +270,7 @@ def detect_bag(action = None):
         # print(output.shape)
 
         # detect circles in the image
-        circles = cv2.HoughCircles(gray, cv2.HOUGH_GRADIENT, 1.9, 25)
+        circles = cv2.HoughCircles(gray, cv2.HOUGH_GRADIENT, 2.1, 25)
         prev_amount = amount_of_bags 
         # ensure at least some circles were found
         if circles is not None:
@@ -312,6 +316,7 @@ def detect_bag(action = None):
                         result.append(bags[-1])
                 else:
                     is_colour_changed(sector)
+                    
             
 
                 avg_color_per_row = np.average(sector, axis=0)
@@ -323,40 +328,63 @@ def detect_bag(action = None):
 
 
 
+
 def is_colour_changed(sector):
+
+    if current_colour is None:
+        colour_defined = False
+        return False
+
+    if check[current_colour](sector):
+        return False
+    else:
+        return True
+        
+
+def detect_colour(sector):
 
     global current_colour, colour_defined, colours
 
     colour_defined = True
 
+    if is_green(sector):
+        current_colour = colours[0]
+        return current_colour
+
+    elif is_yellow(sector):
+        current_colour = colours[1]
+        return current_colour
+
+    elif is_purple(sector):
+        current_colour = colours[2]
+        return current_colour
+
+    current_colour = None
+    colour_defined = False
+
+
+def is_green(sector):
     green_mask = cv2.inRange(sector, low_green, high_green)
     if abs(get_avrg_colour(green_mask) - 255) <= 10:
-        if current_colour != colours[0]: 
-            current_colour = colours[0]
+        return True
+    else:
+        return False
+
+def is_yellow(sector):
+    yellow_mask = cv2.inRange(sector, low_yellow, high_yellow)
+        if abs(get_avrg_colour(yellow_mask) - 255) <= 10:
             return True
         else:
             return False
 
-    else:
-        yellow_mask = cv2.inRange(sector, low_yellow, high_yellow)
-        if abs(get_avrg_colour(yellow_mask) - 255) <= 10:
-            if current_colour != colours[1]:
-                current_colour = colours[1]
+def is_purple(sector):
+    purple_mask = cv2.inRange(sector, low_purple, high_purple)
+            if abs(get_avrg_colour(purple_mask) - 255) <= 10:
                 return True
             else:
                 return False
-        else:
-            purple_mask = cv2.inRange(sector, low_purple, high_purple)
-            if abs(get_avrg_colour(purple_mask) - 255) <= 10:
-                if current_colour != colours[2]:
-                    current_colour = colours[2]
-                    return True
-                else:
-                    return False
-    
 
-    if current_colour is None:
-        colour_defined = False
+
 
 
 
@@ -432,7 +460,7 @@ z = Qpos[2]
 
 
 go_to_y(0.55)
-go_to_z(0.45)
+go_to_z(0.43)
 go_to_x(0.47, 'detect') 
 
 print('result =' , result)

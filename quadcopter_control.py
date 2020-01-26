@@ -14,12 +14,12 @@ global bags, amount_of_bags, last_r, result
 global path
 global low_green, low_yellow, low_purple
 global high_green, high_yellow, high_purple
-global colour_defined, colours, current_colour
+global colour_defined, colours, current_colour, check
+global counter
 
 start_stream = False
 bags = []
 amount_of_bags = 0
-last_r = 0
 path = '/home/evgesha/nti/copter_proj/imgs'
 result = []
 
@@ -36,9 +36,17 @@ colour_defined = False
 colours = ['green', 'yellow', 'purple']
 current_colour = None
 
+colour_rad = {'green': [], 'yellow': [], 'purple': [] }
+colour_count = {'green': 0, 'yellow': 0, 'purple': 0 }
+
 check = {   'green': lambda x: is_green(x), 
             'yellow': lambda x: is_yellow(x), 
             'purple': lambda x: is_purple(x)  }
+
+counter = 0
+
+
+
 
 def go_to_x(x1, action = None):
     global x, y, z, start_stream
@@ -66,6 +74,12 @@ def go_to_x(x1, action = None):
         print(x)
         print('\n')
     
+
+    result.append(max(colour_rad['green']))
+    result.append(max(colour_rad['yellow']))
+    result.append(max(colour_rad['purple']))
+
+    print(result)
 
     err = vrep.simxSetObjectPosition(
             clientID, QuadricopterT, -1, (x1, y, z), vrep.simx_opmode_oneshot_wait)
@@ -240,6 +254,7 @@ def detect_bag(action = None):
     global low_green, low_yellow, low_purple
     global high_green, high_yellow, high_purple
     global colour_defined
+    global counter 
 
     if action == 'detect':
 
@@ -271,7 +286,6 @@ def detect_bag(action = None):
 
         # detect circles in the image
         circles = cv2.HoughCircles(gray, cv2.HOUGH_GRADIENT, 2.1, 25)
-        prev_amount = amount_of_bags 
         # ensure at least some circles were found
         if circles is not None:
             print('hey')
@@ -290,42 +304,48 @@ def detect_bag(action = None):
                     y_max = y
                 # draw the circle in the output image, then draw a rectangle
                 # corresponding to the center of the circle
-            amount_of_bags += 1
-            bags.append(r_max)
             
+            r_max = int(r_max)
+            x_max = int(x_max)
+            y_max = int(y_max)                
+
+            # cv2.circle(output, (x_max, y_max), r_max, (0, 255, 0), 4)
+            # cv2.rectangle(output, (x_max - 5, y_max - 5), (x_max + 5, y_max + 5), (0, 128, 255), -1)  
+            sector = output[y_max-5:y_max+5, x_max-5:x_max+5]    
+            avg_color_per_row = np.average(sector, axis=0)
+            avg_color = np.average(avg_color_per_row, axis=0)
+
+            detect_colour(sector)
+
+            if current_colour is not None:
+                colour_rad[current_colour].append(r_max)
+                colour_count[current_colour] = counter
+                counter += 1
+
+            # print(avg_color, type(avg_color))
 
 
-            if prev_amount != amount_of_bags:
-                r_max = int(r_max)
-                x_max = int(x_max)
-                y_max = int(y_max)                
 
-                # cv2.circle(output, (x_max, y_max), r_max, (0, 255, 0), 4)
-                # cv2.rectangle(output, (x_max - 5, y_max - 5), (x_max + 5, y_max + 5), (0, 128, 255), -1)  
-                sector = output[y_max-5:y_max+5, x_max-5:x_max+5]    
-                avg_color_per_row = np.average(sector, axis=0)
-                avg_color = np.average(avg_color_per_row, axis=0)
-                # print(avg_color, type(avg_color))
+            # if colour_defined and is_colour_changed(sector):
+            #     result.append(max(bags[:-1]))
+            #     bags = [bags[-1]]
+            #     print(result)
+            #     detect_colour(sector)
+            #     print('colour changed!', current_colour)
+            # else:
+            #     if len(result) == 2 and counter > 4:
+            #         result.append(max(bags))
+            #     detect_colour(sector)
+                
+        
 
-                if colour_defined and is_colour_changed(sector):
-                    result.append(max(bags[:-1]))
-                    bags = [bags[-1]]
-                    print(result)
-                    detect_colour(sector)
-                    print('colour changed!', current_colour)
-                    if len(result) == 2:
-                        result.append(bags[-1])
-                else:
-                    detect_colour(sector)
-                    
-            
+            avg_color_per_row = np.average(sector, axis=0)
+            avg_color = np.average(avg_color_per_row, axis=0)
 
-                avg_color_per_row = np.average(sector, axis=0)
-                avg_color = np.average(avg_color_per_row, axis=0)
+            name = str(amount_of_bags) + '____' + str(avg_color) + '.png'
+            # show the output image
+            cv2.imwrite(os.path.join(path , name), sector)
 
-                name = str(amount_of_bags) + '____' + str(avg_color) + '.png'
-                # show the output image
-                cv2.imwrite(os.path.join(path , name), sector)
 
 
 
@@ -464,9 +484,10 @@ z = Qpos[2]
 
 go_to_y(0.55)
 go_to_z(0.43)
-go_to_x(0.47, 'detect') 
+go_to_x(0.3, 'detect') 
 
 print('result =' , result)
+print('colour_count = ', colour_count)
 
 # err = vrep.simxSetObjectOrientation(
 #     clientID, QuadricopterT, QuadricopterT, (0, 0, rad(10)), vrep.simx_opmode_oneshot_wait)

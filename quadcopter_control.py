@@ -29,7 +29,7 @@ high_green = (145, 255, 24)
 low_yellow = (55, 150, 150)
 high_yellow = (116, 255, 255)
 
-low_purple = (240, 135, 240)
+low_purple = (150, 70, 150)
 high_purple = (255, 145, 255) 
 
 colour_defined = False
@@ -311,11 +311,12 @@ def detect_bag(action = None):
                     result.append(max(bags[:-1]))
                     bags = [bags[-1]]
                     print(result)
+                    detect_colour(sector)
                     print('colour changed!', current_colour)
                     if len(result) == 2:
                         result.append(bags[-1])
                 else:
-                    is_colour_changed(sector)
+                    detect_colour(sector)
                     
             
 
@@ -331,6 +332,8 @@ def detect_bag(action = None):
 
 def is_colour_changed(sector):
 
+    global current_colour
+
     if current_colour is None:
         colour_defined = False
         return False
@@ -338,8 +341,9 @@ def is_colour_changed(sector):
     if check[current_colour](sector):
         return False
     else:
+        print('colour is changed')
         return True
-        
+
 
 def detect_colour(sector):
 
@@ -361,33 +365,32 @@ def detect_colour(sector):
 
     current_colour = None
     colour_defined = False
+    print('no colour')
 
 
 def is_green(sector):
     green_mask = cv2.inRange(sector, low_green, high_green)
     if abs(get_avrg_colour(green_mask) - 255) <= 10:
+        print('green')
         return True
     else:
         return False
 
 def is_yellow(sector):
     yellow_mask = cv2.inRange(sector, low_yellow, high_yellow)
-        if abs(get_avrg_colour(yellow_mask) - 255) <= 10:
-            return True
-        else:
-            return False
+    if abs(get_avrg_colour(yellow_mask) - 255) <= 10:
+        print('yellow')
+        return True
+    else:
+        return False
 
 def is_purple(sector):
     purple_mask = cv2.inRange(sector, low_purple, high_purple)
-            if abs(get_avrg_colour(purple_mask) - 255) <= 10:
-                return True
-            else:
-                return False
-
-
-
-
-
+    if abs(get_avrg_colour(purple_mask) - 255) <= 10:
+        print('purple')
+        return True
+    else:
+        return False
 
 
 def get_avrg_colour(sector):
